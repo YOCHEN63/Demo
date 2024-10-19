@@ -1,0 +1,26 @@
+spring:
+  data:
+    redis:
+      host: 192.168.0.58
+      port: 6379
+      database: 0
+  kafka:
+    bootstrap-servers: 192.168.0.58:29092
+    consumer:
+      group-id: your-consumer-group  # 消费者组 ID
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+  datasource:
+    url: jdbc:mysql://192.168.0.58:3306/demo
+    username: root
+    password: 123456
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 30000
+      max-lifetime: 600000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      leak-detection-threshold: 15000
+    driver-class-name: com.mysql.cj.jdbc.Driver
