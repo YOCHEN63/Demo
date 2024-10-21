@@ -1,17 +1,17 @@
 package com.example.demo.Service.Impl;
 
-import com.example.demo.Domain.ProductDO;
+
+import com.example.demo.Redis.RedisService;
 import com.example.demo.Service.ProductService;
 import com.example.demo.dao.ProductDAO;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ProductServiceImpl implements ProductService {
 
     @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisService redisService;
 
     @Autowired
     private ProductDAO productDAO;
@@ -19,20 +19,19 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Boolean placeOrder(Long id, Integer quantity) {
         String productId = id.toString();
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(productId))) {
-            Integer stock = (Integer) redisTemplate.opsForValue().get(productId);
-            if (quantity <= stock) {
-                redisTemplate.opsForValue().set(productId, stock - quantity);
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            Integer stock = productDAO.findStockById(id);
-            if (stock >= quantity) {
-                redisTemplate.opsForValue().set(productId, stock - quantity);
-            }
-            return true;
+        Integer stock = redisService.get(productId);
+
+        // 如果库存为空，在一个原子内检查该物品是否被赋值，如果没有则将数据添加到redis中,使用setIfNotExists保证原子性
+        if (stock == null) {
+            stock = redisService.setIfNotExists(productId, productDAO.findStockById(id));
         }
+        // Lua 脚本
+        // 检查库存是否大于购买量， 如果大于，则扣减（保证原子性）
+        if (redisService.decrIfAvailable(productId, quantity) >= 0) {
+            return true;
+        } else {
+            return false;
+        }
+
     }
 }
